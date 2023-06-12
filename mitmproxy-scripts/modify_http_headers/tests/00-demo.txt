@@ -1,0 +1,2 @@
+https://httpbin.org/headers
+https://www.httpbin.org/headers

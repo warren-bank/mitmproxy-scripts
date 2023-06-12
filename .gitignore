@@ -1,0 +1,2 @@
+mitmproxy-scripts/__pycache__/
+mitmproxy-scripts/**/output/*.json

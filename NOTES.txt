@@ -1,0 +1,98 @@
+--------------------------------------------------------------------------------
+
+https://github.com/emanuele-f/PCAPdroid
+
+https://github.com/emanuele-f/PCAPdroid-mitm
+https://github.com/emanuele-f/PCAPdroid-mitm/blob/v0.15/app/src/main/python/js_injector.py
+
+https://github.com/mitmproxy/mitmproxy
+https://github.com/mitmproxy/mitmproxy/blob/9.0.1/examples/addons/http-add-header.py
+
+--------------------------------------------------------------------------------
+
+https://emanuele-f.github.io/PCAPdroid/
+https://emanuele-f.github.io/PCAPdroid/tls_decryption
+https://emanuele-f.github.io/PCAPdroid/advanced_features#46-js-injector
+
+https://docs.mitmproxy.org/stable/
+https://docs.mitmproxy.org/stable/#running-a-script
+
+--------------------------------------------------------------------------------
+
+https://github.com/emanuele-f/PCAPdroid/issues/57
+  issue that tracks the implementation of PCAPdroid-mitm
+
+https://chaquo.com/chaquopy
+https://chaquo.com/chaquopy/doc/current/versions.html
+
+summary:
+========
+
+* "PCAPdroid-mitm" is an addon to PCAPdroid
+  - it provides a "man-in-the-middle" proxy server,
+    which allows the app to see decrypted HTTPS network traffic
+
+* "PCAPdroid-mitm" is built upon "mitmproxy"
+  - "mitmproxy" is written in Python
+  - "PCAPdroid-mitm" is an Android app that is bundled with "chaquopy"
+
+* "PCAPdroid-mitm" can run custom scripts to modify network traffic inflight
+  - ex: add/edit/remove HTTP request and response headers
+  - ex: conditionally inject javascript to HTML pages
+
+--------------------------------------------------------------------------------
+
+https://github.com/mitmproxy/mitmproxy/issues/76
+https://github.com/mitmproxy/mitmproxy/pull/134
+https://github.com/mitmproxy/mitmproxy/commit/3a1d85ab18dbff82505feac3619af733a0a2b4f7
+  mitmproxy cli supports running multiple scripts
+
+https://github.com/mitmproxy/mitmproxy/tree/9.0.1/examples/addons
+  examples of mitmproxy scripts
+
+https://github.com/emanuele-f/PCAPdroid-mitm/blob/v0.15/app/src/main/python/js_injector.py
+  PCAPdroid-mitm v0.15: embedded mitmproxy script
+
+--------------------------------------------------------------------------------
+
+========
+example:
+========
+
+* in PCAPdroid
+  - Settings > Additional mitmproxy options =
+      "-s /storage/emulated/0/PCAPdroid-mitm/mitmproxy-scripts/modify_http_headers.py"
+
+  - Target app =
+      "WebMonkey"
+
+  - start capture
+
+* in WebMonkey
+  - URL =
+      "https://httpbin.org/headers"
+
+=======
+issues:
+=======
+
+* PCAPdroid-mitm v0.14
+  - does not request permission to access the filesystem
+      https://github.com/emanuele-f/PCAPdroid-mitm/blob/v0.14/app/src/main/AndroidManifest.xml#L5
+
+* PCAPdroid-mitm v0.15
+  - does not request permission to access the filesystem
+      https://github.com/emanuele-f/PCAPdroid-mitm/blob/v0.15/app/src/main/AndroidManifest.xml#L9
+
+=============
+modification:
+=============
+
+* apktool
+  - decode (exclude code)
+  - build  (use aapt2)
+* AndroidManifest.xml
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+--------------------------------------------------------------------------------

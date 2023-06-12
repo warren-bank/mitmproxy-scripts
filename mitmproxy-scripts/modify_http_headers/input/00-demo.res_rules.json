@@ -1,0 +1,26 @@
+[
+    {
+        "url" : "^.*$",
+        "headers" : {
+            "X-Custom-Sample-Header-01" : "Foo",
+            "X-Custom-Sample-Header-02" : "Bar",
+            "X-Custom-Sample-Header-03" : "Baz"
+        }
+    },
+    {
+        "url" : "^.*://www\\..*$",
+        "headers" : {
+            "X-Custom-Sample-Header-01" : "WWW-Foo",
+            "X-Custom-Sample-Header-02" : "WWW-Bar",
+            "X-Custom-Sample-Header-03" : "WWW-Baz"
+        },
+        "stop": true
+    },
+    {
+        "url" : "^.*$",
+        "headers" : {
+            "X-Custom-Sample-Header-01" : "Hello",
+            "X-Custom-Sample-Header-03" : false
+        }
+    }
+]
