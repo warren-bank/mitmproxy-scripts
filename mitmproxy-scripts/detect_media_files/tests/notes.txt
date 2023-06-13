@@ -13,11 +13,9 @@ https://example.com/detect_media_files.html
       with links to play its corresponding video stream
       in an assortment of players
     - sort order: newest first, oldest last
+    - button: clear list
   * to do:
     - pagination: DOM renders a maximum of 50 objects at any time
-    - button: clear list
-      * XHR request that is intercepted by mitm script,
-        and triggers it to delete the JSON output file
 
 WebMonkey userscript:
   * URL:

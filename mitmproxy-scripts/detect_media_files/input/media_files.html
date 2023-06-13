@@ -146,9 +146,9 @@
   </style>
 </head>
 <body>
+  <div id="delete_media"></div>
   <div>
-    <ul>
-    </ul>
+    <ul></ul>
   </div>
   <script type="text/javascript">
 
@@ -160,14 +160,15 @@ var user_options = {
 }
 
 var strings = {
-  "title":         "PCAPdroid mitm: Detected Media File Requests",
+  "title":          "PCAPdroid mitm: Detected Media File Requests",
   "labels": {
-    "referer_url": "Website:",
-    "media_url":   "Media File:",
-    "media_type":  "Media Type:"
+    "referer_url":  "Website:",
+    "media_url":    "Media File:",
+    "media_type":   "Media Type:"
   },
   "buttons": {
-    "watch_media": "Watch"
+    "watch_media":  "Watch",
+    "delete_media": "Clear List"
   }
 }
 
@@ -181,7 +182,8 @@ var constants = {
     "base_webcast_reloaded_icons": "https://github.com/warren-bank/crx-webcast-reloaded/raw/gh-pages/chrome_extension/2-release/popup/img/"
   },
   "xhr_urls": {
-    "get_media": window.location.href.replace(/\.html$/i, '.json')
+    "get_media":    window.location.href.replace(/\.html$/i, '.json'),
+    "delete_media": window.location.href.replace(/\.html$/i, '/delete')
   }
 }
 
@@ -227,6 +229,14 @@ var make_element = function(elementName, html) {
     el.innerHTML = html
 
   return el
+}
+
+var remove_child_elements = function(el) {
+  if (el) {
+    while (el.childNodes.length) {
+      el.removeChild(el.childNodes[0])
+    }
+  }
 }
 
 // ----------------------------------------------------------------------------- URL links to tools on Webcast Reloaded website
@@ -404,28 +414,51 @@ var insert_webcast_reloaded_div_to_listitem = function(li, media_file) {
 var build_dom_for_all_media = function(media_files) {
   var head  = window.document.getElementsByTagName('head')[0]
   var body  = window.document.body
-  var title = strings.title
+  var container, child_node
 
-  if (title) {
-    window.document.title = title
+  if (strings.title) {
+    window.document.title = strings.title
 
     body.insertBefore(
-      make_element('div', ('<h2>' + title + '</h2>')),
+      make_element('div', ('<h2>' + strings.title + '</h2>')),
       body.childNodes[0]
     )
   }
 
-  var ul = body.querySelector('ul')
-  if (!media_files || !Array.isArray(media_files) || !media_files.length || !ul) return
+  if (!media_files || !Array.isArray(media_files) || !media_files.length) return
 
-  var media_file, li
-  for (var i=0; i < media_files.length; i++) {
-    media_file = media_files[i]
-    li         = format_media_to_listitem(media_file)
+  container = body.querySelector('#delete_media')
+  if (container) {
+    child_node = make_element('button', strings.buttons.delete_media)
 
-    ul.appendChild(li)
-    attach_event_handlers_to_listitem(li, media_file)
-    insert_webcast_reloaded_div_to_listitem(li, media_file)
+    child_node.addEventListener('click', function(event) {
+      event.stopPropagation();event.stopImmediatePropagation();
+
+      download_json(constants.xhr_urls.delete_media, {"Accept": "application/json"}, function(result) {
+        if (result && result.success) {
+          remove_child_elements(body.querySelector('#delete_media'))
+          remove_child_elements(body.querySelector('ul'))
+        }
+        else {
+          window.alert('Error')
+        }
+      })
+    })
+
+    container.appendChild(child_node)
+  }
+
+  container = body.querySelector('ul')
+  if (container) {
+    var media_file
+    for (var i=0; i < media_files.length; i++) {
+      media_file = media_files[i]
+      child_node = format_media_to_listitem(media_file)
+
+      container.appendChild(child_node)
+      attach_event_handlers_to_listitem(child_node, media_file)
+      insert_webcast_reloaded_div_to_listitem(child_node, media_file)
+    }
   }
 }
 

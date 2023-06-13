@@ -66,4 +66,17 @@ class DetectMediaFiles:
             else:
                 flow.response = http.Response.make(404, b'File not found')
 
+        if flow.request.pretty_url == 'https://example.com/detect_media_files/delete':
+            try:
+                os.remove(self.output_path)
+                json_bytes = b'{"success": true}'
+            except OSError:
+                json_bytes = b'{"success": false}'
+
+            flow.response = http.Response.make(
+                200,
+                json_bytes,
+                {'Content-Type': 'application/json'}
+            )
+
 addons = [DetectMediaFiles()]
