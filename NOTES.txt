@@ -16,6 +16,8 @@ https://emanuele-f.github.io/PCAPdroid/advanced_features#46-js-injector
 
 https://docs.mitmproxy.org/stable/
 https://docs.mitmproxy.org/stable/#running-a-script
+https://docs.mitmproxy.org/stable/addons-overview/
+https://docs.mitmproxy.org/stable/addons-examples/
 
 --------------------------------------------------------------------------------
 

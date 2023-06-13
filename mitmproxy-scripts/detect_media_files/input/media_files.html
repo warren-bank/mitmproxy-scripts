@@ -1,0 +1,459 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style type="text/css">
+
+    body {
+      background-color: #fff;
+      text-align: left;
+    }
+
+    body > div > h2 {
+      text-align: center;
+      margin: 0.5em 0;
+    }
+
+    body > div > ul > li > div.media-container {
+      min-height: 70px;
+    }
+    body > div > ul > li > div.media-container > table {
+    }
+    body > div > ul > li > div.media-container > table tr > td[colspan] > button.watch_media {
+    }
+    body > div > ul > li > div.media-container > div.icons-container {
+    }
+
+    /*
+    // --------------------------------------------------- CSS: reset
+    */
+
+    h2 {
+      font-size: 24px;
+    }
+
+    body, a {
+      font-size: 18px;
+    }
+
+    button {
+      font-size: 16px;
+    }
+
+    /*
+    // --------------------------------------------------- CSS: separation between media files
+    */
+
+    body > div > ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    body > div > ul > li {
+      list-style: none;
+      margin-top: 0.5em;
+      border-top: 1px solid #999;
+      padding-top: 0.5em;
+    }
+
+    body > div > ul > li > div {
+      margin-top: 0.5em;
+    }
+
+    /*
+    // --------------------------------------------------- CSS: media info
+    */
+
+    body > div > ul > li > div.media-container > table {
+      border-collapse: collapse;
+      width:     calc(100% - 90px);
+      max-width: calc(100% - 90px);
+    }
+
+    body > div > ul > li > div.media-container > table tr > td:not([colspan]) {
+      border: 1px solid black;
+      padding: 0.5em;
+      word-break: break-all;
+    }
+
+    body > div > ul > li > div.media-container > table tr > td[colspan] {
+      padding-top: 0.5em;
+    }
+
+    /*
+    // --------------------------------------------------- CSS: links to tools on Webcast Reloaded website
+    */
+
+    body > div > ul > li > div.media-container > div.icons-container {
+      display: block;
+      position: relative;
+      z-index: 1;
+      float: right;
+      margin: 0.5em;
+      width: 60px;
+      height: 60px;
+      max-height: 60px;
+      vertical-align: top;
+      background-color: #d7ecf5;
+      border: 1px solid #000;
+      border-radius: 14px;
+    }
+
+    body > div > ul > li > div.media-container > div.icons-container > a.chromecast,
+    body > div > ul > li > div.media-container > div.icons-container > a.chromecast > img,
+    body > div > ul > li > div.media-container > div.icons-container > a.airplay,
+    body > div > ul > li > div.media-container > div.icons-container > a.airplay > img,
+    body > div > ul > li > div.media-container > div.icons-container > a.proxy,
+    body > div > ul > li > div.media-container > div.icons-container > a.proxy > img,
+    body > div > ul > li > div.media-container > div.icons-container > a.video-link,
+    body > div > ul > li > div.media-container > div.icons-container > a.video-link > img {
+      display: block;
+      width: 25px;
+      height: 25px;
+    }
+
+    body > div > ul > li > div.media-container > div.icons-container > a.chromecast,
+    body > div > ul > li > div.media-container > div.icons-container > a.airplay,
+    body > div > ul > li > div.media-container > div.icons-container > a.proxy,
+    body > div > ul > li > div.media-container > div.icons-container > a.video-link {
+      position: absolute;
+      z-index: 1;
+      text-decoration: none;
+    }
+
+    body > div > ul > li > div.media-container > div.icons-container > a.chromecast,
+    body > div > ul > li > div.media-container > div.icons-container > a.airplay {
+      top: 0;
+    }
+    body > div > ul > li > div.media-container > div.icons-container > a.proxy,
+    body > div > ul > li > div.media-container > div.icons-container > a.video-link {
+      bottom: 0;
+    }
+
+    body > div > ul > li > div.media-container > div.icons-container > a.chromecast,
+    body > div > ul > li > div.media-container > div.icons-container > a.proxy {
+      left: 0;
+    }
+    body > div > ul > li > div.media-container > div.icons-container > a.airplay,
+    body > div > ul > li > div.media-container > div.icons-container > a.video-link {
+      right: 0;
+    }
+    body > div > ul > li > div.media-container > div.icons-container > a.airplay + a.video-link {
+      right: 17px; /* (60 - 25)/2 to center when there is no proxy icon */
+    }
+
+  </style>
+</head>
+<body>
+  <div>
+    <ul>
+    </ul>
+  </div>
+  <script type="text/javascript">
+
+var user_options = {
+  "greasemonkey": {
+    "force_http":  true,
+    "force_https": false
+  }
+}
+
+var strings = {
+  "title":         "PCAPdroid mitm: Detected Media File Requests",
+  "labels": {
+    "referer_url": "Website:",
+    "media_url":   "Media File:",
+    "media_type":  "Media Type:"
+  },
+  "buttons": {
+    "watch_media": "Watch"
+  }
+}
+
+var constants = {
+  "dom_classes": {
+    "div_media":         "media-container",
+    "div_webcast_icons": "icons-container",
+    "btn_watch_media":   "watch_media"
+  },
+  "img_urls": {
+    "base_webcast_reloaded_icons": "https://github.com/warren-bank/crx-webcast-reloaded/raw/gh-pages/chrome_extension/2-release/popup/img/"
+  },
+  "xhr_urls": {
+    "get_media": window.location.href.replace(/\.html$/i, '.json')
+  }
+}
+
+// ----------------------------------------------------------------------------- helpers
+
+// make GET request, parse JSON response, pass data to callback
+var download_json = function(url, headers, callback) {
+  var xhr = new window.XMLHttpRequest()
+  xhr.open("GET", url, true, null, null)
+
+  if (headers && (typeof headers === 'object')) {
+    var keys = Object.keys(headers)
+    var key, val
+    for (var i=0; i < keys.length; i++) {
+      key = keys[i]
+      val = headers[key]
+      xhr.setRequestHeader(key, val)
+    }
+  }
+
+  xhr.onload = function(e) {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        try {
+          var json_data = JSON.parse(xhr.responseText)
+          callback(json_data)
+        }
+        catch(error) {
+        }
+      }
+    }
+  }
+
+  xhr.send()
+}
+
+// -----------------------------------------------------------------------------
+
+var make_element = function(elementName, html) {
+  var el = window.document.createElement(elementName)
+
+  if (html)
+    el.innerHTML = html
+
+  return el
+}
+
+// ----------------------------------------------------------------------------- URL links to tools on Webcast Reloaded website
+
+var get_webcast_reloaded_url = function(video_url, vtt_url, referer_url, force_http, force_https) {
+  force_http  = (typeof force_http  === 'boolean') ? force_http  : user_options.greasemonkey.force_http
+  force_https = (typeof force_https === 'boolean') ? force_https : user_options.greasemonkey.force_https
+
+  var encoded_video_url, encoded_vtt_url, encoded_referer_url, webcast_reloaded_base, webcast_reloaded_url
+
+  encoded_video_url     = encodeURIComponent(encodeURIComponent(btoa(video_url)))
+  encoded_vtt_url       = vtt_url ? encodeURIComponent(encodeURIComponent(btoa(vtt_url))) : null
+  referer_url           = referer_url ? referer_url : window.location.href
+  encoded_referer_url   = encodeURIComponent(encodeURIComponent(btoa(referer_url)))
+
+  webcast_reloaded_base = {
+    "https": "https://warren-bank.github.io/crx-webcast-reloaded/external_website/index.html",
+    "http":  "http://webcast-reloaded.surge.sh/index.html"
+  }
+
+  webcast_reloaded_base = (force_http)
+                            ? webcast_reloaded_base.http
+                            : (force_https)
+                               ? webcast_reloaded_base.https
+                               : (video_url.toLowerCase().indexOf('http:') === 0)
+                                  ? webcast_reloaded_base.http
+                                  : webcast_reloaded_base.https
+
+  webcast_reloaded_url  = webcast_reloaded_base + '#/watch/' + encoded_video_url + (encoded_vtt_url ? ('/subtitle/' + encoded_vtt_url) : '') + '/referer/' + encoded_referer_url
+  return webcast_reloaded_url
+}
+
+// -----------------------------------------------------------------------------
+
+var get_webcast_reloaded_url_chromecast_sender = function(video_url, vtt_url, referer_url) {
+  return get_webcast_reloaded_url(video_url, vtt_url, referer_url, /* force_http= */ null, /* force_https= */ null).replace('/index.html', '/chromecast_sender.html')
+}
+
+var get_webcast_reloaded_url_airplay_sender = function(video_url, vtt_url, referer_url) {
+  return get_webcast_reloaded_url(video_url, vtt_url, referer_url, /* force_http= */ true, /* force_https= */ false).replace('/index.html', '/airplay_sender.es5.html')
+}
+
+var get_webcast_reloaded_url_proxy = function(hls_url, vtt_url, referer_url) {
+  return get_webcast_reloaded_url(hls_url, vtt_url, referer_url, /* force_http= */ true, /* force_https= */ false).replace('/index.html', '/proxy.html')
+}
+
+var make_webcast_reloaded_div = function(video_url, vtt_url, referer_url) {
+  var webcast_reloaded_urls = {
+//  "index":             get_webcast_reloaded_url(                  video_url, vtt_url, referer_url),
+    "chromecast_sender": get_webcast_reloaded_url_chromecast_sender(video_url, vtt_url, referer_url),
+    "airplay_sender":    get_webcast_reloaded_url_airplay_sender(   video_url, vtt_url, referer_url),
+    "proxy":             get_webcast_reloaded_url_proxy(            video_url, vtt_url, referer_url)
+  }
+
+  var div = make_element('div')
+
+  var html = [
+    '<a target="_blank" class="chromecast" href="' + webcast_reloaded_urls.chromecast_sender + '" title="Chromecast Sender"><img src="'       + constants.img_urls.base_webcast_reloaded_icons + 'chromecast.png"></a>',
+    '<a target="_blank" class="airplay" href="'    + webcast_reloaded_urls.airplay_sender    + '" title="ExoAirPlayer Sender"><img src="'     + constants.img_urls.base_webcast_reloaded_icons + 'airplay.png"></a>',
+    '<a target="_blank" class="proxy" href="'      + webcast_reloaded_urls.proxy             + '" title="HLS-Proxy Configuration"><img src="' + constants.img_urls.base_webcast_reloaded_icons + 'proxy.png"></a>',
+    '<a target="_blank" class="video-link" href="' + video_url                               + '" title="direct link to video"><img src="'    + constants.img_urls.base_webcast_reloaded_icons + 'video_link.png"></a>'
+  ]
+
+  div.setAttribute('class', constants.dom_classes.div_webcast_icons)
+  div.innerHTML = html.join("\n")
+
+  return div
+}
+
+var insert_webcast_reloaded_div = function(block_element, video_url, vtt_url, referer_url) {
+  var webcast_reloaded_div = make_webcast_reloaded_div(video_url, vtt_url, referer_url)
+
+  if (block_element.childNodes.length)
+    block_element.insertBefore(webcast_reloaded_div, block_element.childNodes[0])
+  else
+    block_element.appendChild(webcast_reloaded_div)
+}
+
+// ----------------------------------------------------------------------------- URL redirect
+
+var redirect_to_url = function(url) {
+  if (!url) return
+
+  if (typeof GM_loadUrl === 'function') {
+    if (typeof GM_resolveUrl === 'function')
+      url = GM_resolveUrl(url, window.location.href) || url
+
+    GM_loadUrl(url, 'Referer', window.location.href)
+  }
+  else {
+    try {
+      window.top.location = url
+    }
+    catch(e) {
+      window.window.location = url
+    }
+  }
+}
+
+var process_video_url = function(video_url, video_type, vtt_url, referer_url) {
+  if (!referer_url)
+    referer_url = window.location.href
+
+  if (typeof GM_startIntent === 'function') {
+    // running in Android-WebMonkey: open Intent chooser
+
+    var args = [
+      /* action = */ 'android.intent.action.VIEW',
+      /* data   = */ video_url,
+      /* type   = */ video_type
+    ]
+
+    // extras:
+    if (vtt_url) {
+      args.push('textUrl')
+      args.push(vtt_url)
+    }
+    if (referer_url) {
+      args.push('referUrl')
+      args.push(referer_url)
+    }
+
+    GM_startIntent.apply(this, args)
+  }
+  else {
+    // running in standard web browser: redirect URL to top-level tool on Webcast Reloaded website
+
+    redirect_to_url(get_webcast_reloaded_url(video_url, vtt_url, referer_url))
+  }
+}
+
+// ----------------------------------------------------------------------------- display all media
+
+var format_media_to_listitem = function(media_file) {
+  var inner_html = [
+    '<div class="' + constants.dom_classes.div_media + '">',
+      '<table>',
+        '<tr><td>' + strings.labels.referer_url + '</td><td>' + media_file.referer_url + '</td></tr>',
+        '<tr><td>' + strings.labels.media_url   + '</td><td>' + media_file.media_url   + '</td></tr>',
+        '<tr><td>' + strings.labels.media_type  + '</td><td>' + media_file.media_type  + '</td></tr>',
+        '<tr><td colspan="2">',
+          '<button class="' + constants.dom_classes.btn_watch_media  + '">' + strings.buttons.watch_media  + '</button>',
+        '</td></tr>',
+      '</table>',
+    '</div>'
+  ]
+
+  return make_element('li', inner_html.join("\n"))
+}
+
+var attach_event_handlers_to_listitem = function(li, media_file) {
+  var button_watch_media = li.querySelector('button.' + constants.dom_classes.btn_watch_media)
+
+  button_watch_media.addEventListener('click', function(event) {
+    event.stopPropagation();event.stopImmediatePropagation();
+
+    var video_url   = media_file.media_url
+    var video_type  = media_file.media_type
+    var vtt_url     = null
+    var referer_url = media_file.referer_url
+
+    process_video_url(video_url, video_type, vtt_url, referer_url)
+  })
+}
+
+var insert_webcast_reloaded_div_to_listitem = function(li, media_file) {
+  var block_element = li.querySelector('div.' + constants.dom_classes.div_media)
+  var video_url     = media_file.media_url
+  var vtt_url       = null
+  var referer_url   = media_file.referer_url
+
+  insert_webcast_reloaded_div(block_element, video_url, vtt_url, referer_url)
+}
+
+var build_dom_for_all_media = function(media_files) {
+  var head  = window.document.getElementsByTagName('head')[0]
+  var body  = window.document.body
+  var title = strings.title
+
+  if (title) {
+    window.document.title = title
+
+    body.insertBefore(
+      make_element('div', ('<h2>' + title + '</h2>')),
+      body.childNodes[0]
+    )
+  }
+
+  var ul = body.querySelector('ul')
+  if (!media_files || !Array.isArray(media_files) || !media_files.length || !ul) return
+
+  var media_file, li
+  for (var i=0; i < media_files.length; i++) {
+    media_file = media_files[i]
+    li         = format_media_to_listitem(media_file)
+
+    ul.appendChild(li)
+    attach_event_handlers_to_listitem(li, media_file)
+    insert_webcast_reloaded_div_to_listitem(li, media_file)
+  }
+}
+
+var download_all_media = function(callback) {
+  if (typeof callback !== 'function') return
+
+  download_json(constants.xhr_urls.get_media, {"Accept": "application/json"}, function(media_files) {
+    if (media_files && Array.isArray(media_files) && media_files.length)
+      media_files.reverse()
+
+    callback(media_files)
+  })
+}
+
+var display_all_media = function() {
+  download_all_media(build_dom_for_all_media)
+}
+
+// ----------------------------------------------------------------------------- bootstrap
+
+var init = function() {
+  display_all_media()
+}
+
+init()
+
+// -----------------------------------------------------------------------------
+
+  </script>
+</body>
+</html>

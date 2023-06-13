@@ -15,22 +15,34 @@ class ModifyHttpHeaders:
         # JSON schema is described here:
         #   https://github.com/warren-bank/moz-rewrite/tree/json/master#data-structure
 
-        f = open(__req__)
-        self.req_rules = json.load(f)
-        f.close()
+        try:
+            f = open(__req__, mode='rt', encoding='utf-8')
+            self.req_rules = json.load(f)
+            f.close()
 
-        f = open(__res__)
-        self.res_rules = json.load(f)
-        f.close()
+            if not isinstance(self.req_rules, list):
+                raise IOError('not an array')
+        except IOError:
+            self.req_rules = []
+
+        try:
+            f = open(__res__, mode='rt', encoding='utf-8')
+            self.res_rules = json.load(f)
+            f.close()
+
+            if not isinstance(self.res_rules, list):
+                raise IOError('not an array')
+        except IOError:
+            self.res_rules = []
 
         for index, rule in reversed(list(enumerate(self.req_rules))):
-            if ('url' in rule) and ('headers' in rule) and rule['url'] and rule['headers']:
+            if isinstance(rule, dict) and ('url' in rule) and ('headers' in rule) and rule['url'] and rule['headers']:
                 rule['url'] = re.compile(rule['url'], re.IGNORECASE)
             else:
                 del self.req_rules[index]
 
         for index, rule in reversed(list(enumerate(self.res_rules))):
-            if ('url' in rule) and ('headers' in rule) and rule['url'] and rule['headers']:
+            if isinstance(rule, dict) and ('url' in rule) and ('headers' in rule) and rule['url'] and rule['headers']:
                 rule['url'] = re.compile(rule['url'], re.IGNORECASE)
             else:
                 del self.res_rules[index]

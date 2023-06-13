@@ -1,0 +1,30 @@
+https://example.com/detect_media_files.json
+  * content-type: application/json
+  * JSON array of object
+  * sort order: oldest first, newest last
+
+https://example.com/detect_media_files.html
+  * content-type: text/html
+  * contains inline JS to:
+    - use XHR to download: "detect_media_files.json"
+    - builds DOM to display data
+  * DOM:
+    - displays each object as a row,
+      with links to play its corresponding video stream
+      in an assortment of players
+    - sort order: newest first, oldest last
+  * to do:
+    - pagination: DOM renders a maximum of 50 objects at any time
+    - button: clear list
+      * XHR request that is intercepted by mitm script,
+        and triggers it to delete the JSON output file
+
+WebMonkey userscript:
+  * URL:
+      https://github.com/warren-bank/mitmproxy-scripts/raw/master/mitmproxy-scripts/detect_media_files/webmonkey-userscript/mitmproxy-script.detect_media_files.user.js
+  * purpose:
+    - changes the behavior of "Watch" buttons on the HTML page:
+        https://example.com/detect_media_files.html
+    - starts an implicit Intent to open the chosen media file
+    - Android shows an Activity chooser dialog,
+      which allows the user to select an available media player
