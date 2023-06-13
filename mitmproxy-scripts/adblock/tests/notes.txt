@@ -1,0 +1,63 @@
+===========================
+Ad Block performance tests:
+===========================
+
+https://d3ward.github.io/toolz/adblock.html
+
+https://adblock-tester.com/
+
+https://canyoublockit.com/
+https://canyoublockit.com/testing/
+https://canyoublockit.com/extreme-test/
+https://canyoublockit.com/advanced-adblocker-test/web-banners/
+
+=============
+test results:
+=============
+
+1. https://d3ward.github.io/toolz/adblock.html
+   * direct HTTPS connection:
+     - blocked:  20 of 147 = 13.6%
+     - allowed: 127 of 147 = 86.4%
+   * with 'adblock' mitmproxy script:
+     - blocked: 143 of 147 = 97.3%
+     - allowed:   4 of 147 =  2.7%
+     - blocklists:
+       1. https://easylist-downloads.adblockplus.org/easylist.txt
+          - size: 1.37 MB
+     - notes:
+       * network is slightly (but noticably) slower with 'adblock' running
+       * blocklists will automatically update when older than 7 days,
+         when 'adblock' script is initialized,
+         which occurs when 'PCAPdroid-mitm' is started
+     - issues:
+       * When an automatic blocklists update is triggered,
+         the files download very quickly,
+         but there must be a race-condition of some sort,
+         because the 'adblock' hangs,
+         and prevents 'PCAPdroid-mitm' from working properly.
+         When this occurs,
+         after the blocklists have finished download,
+         if 'PCAPdroid-mitm' is stopped and restarted,
+         everything works as it should.
+
+==============
+extensibility:
+==============
+
+1. file: 'adblock.py'
+   * method:   'update_blocklists'
+   * variable: 'default_blocklist_urls'
+   * purpose:
+     - defines an array of URLs for blocklists that should be managed by the script
+     - every 7 days, these URLs are redownloaded and saved to:
+       * directory: 'adblock/output/blocklists'
+       * filenames: "${array_index}.txt"
+
+2. directory: 'adblock/output/blocklists'
+   * purpose:
+     - a user can save additional blocklist text files into this directory
+     - so long as filenames don't collide with those managed by the script,
+       user blocklists will:
+       * never be deleted
+       * always be used

@@ -1,9 +1,17 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
+# ------------------------------------------------
+# https://github.com/scrapinghub/adblockparser
+# https://github.com/scrapinghub/adblockparser/tree/master/adblockparser
+#
+# based on:
+#   version: 0.7
+#   date:    2016-10-17
+#   commit:  4089612d65018d38dbb88dd7f697bcb07814014d
+#   license: MIT
+#            https://github.com/scrapinghub/adblockparser/blob/4089612d65018d38dbb88dd7f697bcb07814014d/LICENSE.txt
+# ------------------------------------------------
+
 import re
 from collections import defaultdict
-from functools import partial
-from adblockparser.utils import split_data
 
 
 class AdblockParsingError(ValueError):
@@ -244,7 +252,7 @@ class AdblockRule(object):
         # Separator character ^ matches anything but a letter, a digit, or
         # one of the following: _ - . %. The end of the address is also
         # accepted as separator.
-        rule = rule.replace("^", "(?:[^\w\d_\-.%]|$)")
+        rule = rule.replace("^", r"(?:[^\w\d_\-.%]|$)")
 
         # * symbol
         rule = rule.replace("*", ".*")
@@ -269,7 +277,7 @@ class AdblockRule(object):
 
         # other | symbols should be escaped
         # we have "|$" in our regexp - do not touch it
-        rule = re.sub("(\|)[^$]", r"\|", rule)
+        rule = re.sub(r"(\|)[^$]", r"\|", rule)
 
         return rule
 
@@ -286,16 +294,13 @@ class AdblockRules(object):
     optimizes some common cases.
     """
 
-    def __init__(self, rules, supported_options=None, skip_unsupported_rules=True,
-                 use_re2='auto', max_mem=256*1024*1024, rule_cls=AdblockRule):
+    def __init__(self, rules, supported_options=None, skip_unsupported_rules=True, rule_cls=AdblockRule):
 
         if supported_options is None:
             self.supported_options = rule_cls.BINARY_OPTIONS + ['domain']
         else:
             self.supported_options = supported_options
 
-        self.uses_re2 = _is_re2_supported() if use_re2 == 'auto' else use_re2
-        self.re2_max_mem = max_mem
         self.rule_cls = rule_cls
         self.skip_unsupported_rules = skip_unsupported_rules
 
@@ -329,9 +334,8 @@ class AdblockRules(object):
 
         # split rules into blacklists and whitelists
         self.blacklist, self.whitelist = self._split_bw(basic_rules)
-        _combined = partial(_combined_regex, use_re2=self.uses_re2, max_mem=max_mem)
-        self.blacklist_re = _combined([r.regex for r in self.blacklist])
-        self.whitelist_re = _combined([r.regex for r in self.whitelist])
+        self.blacklist_re = _combined_regex([r.regex for r in self.blacklist])
+        self.whitelist_re = _combined_regex([r.regex for r in self.whitelist])
 
         self.blacklist_with_options, self.whitelist_with_options = \
             self._split_bw(non_domain_rules)
@@ -431,34 +435,149 @@ def _domain_variants(domain):
             yield ".".join(parts[-i:])
 
 
-def _combined_regex(regexes, flags=re.IGNORECASE, use_re2=False, max_mem=None):
+def _combined_regex(regexes, flags=re.IGNORECASE):
     """
     Return a compiled regex combined (using OR) from a list of ``regexes``.
     If there is nothing to combine, None is returned.
-
-    re2 library (https://github.com/axiak/pyre2) often can match and compile
-    large regexes much faster than stdlib re module (10x is not uncommon),
-    but there are some gotchas:
-
-    * in case of "DFA out of memory" errors use ``max_mem`` argument
-      to increase the amount of memory re2 is allowed to use.
     """
     joined_regexes = "|".join(r for r in regexes if r)
     if not joined_regexes:
         return None
 
-    if use_re2:
-        import re2
-        return re2.compile(joined_regexes, flags=flags, max_mem=max_mem)
     return re.compile(joined_regexes, flags=flags)
 
 
-def _is_re2_supported():
-    try:
-        import re2
-    except ImportError:
-        return False
+def split_data(iterable, pred):
+    """
+    Split data from ``iterable`` into two lists.
+    Each element is passed to function ``pred``; elements
+    for which ``pred`` returns True are put into ``yes`` list,
+    other elements are put into ``no`` list.
 
-    # re2.match doesn't work in re2 v0.2.20 installed from pypi
-    # (it always returns None).
-    return re2.match('foo', 'foo') is not None
+    >>> split_data(["foo", "Bar", "Spam", "egg"], lambda t: t.istitle())
+    (['Bar', 'Spam'], ['foo', 'egg'])
+    """
+    yes, no = [], []
+    for d in iterable:
+        if pred(d):
+            yes.append(d)
+        else:
+            no.append(d)
+    return yes, no
+
+
+# ------------------------------------------------
+# An mitmproxy adblock script!
+# (Required python modules: adblockparser)
+#
+# (c) 2015-2019 epitron
+#
+# ------------------------------------------------
+# https://github.com/epitron/mitm-adblock
+# https://github.com/epitron/mitm-adblock/blob/master/adblock.py
+#
+# based on:
+#   version: 0.1.0
+#   date:    2021-03-09
+#   commit:  1de914dabc11b50183acdf9bbf7e4aaced6ff91b
+#   license: WTFPL
+#            "DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE"
+#            https://github.com/epitron/mitm-adblock/blob/1de914dabc11b50183acdf9bbf7e4aaced6ff91b/LICENSE.txt
+# ------------------------------------------------
+
+import datetime, os, re
+import urllib.request
+from mitmproxy import http
+from glob import glob
+
+
+class AdBlock:
+
+    def __init__(self):
+        self.IMAGE_MATCHER      = re.compile(r"\.(png|jpe?g|gif)$")
+        self.SCRIPT_MATCHER     = re.compile(r"\.(js)$")
+        self.STYLESHEET_MATCHER = re.compile(r"\.(css)$")
+
+        __dir__ = __file__.removesuffix('.py')
+        __dir__ = os.path.join(__dir__, 'output', 'blocklists')
+
+        if self.should_update_blocklists(__dir__):
+            self.update_blocklists(__dir__)
+
+        try:
+            blocklists = glob(os.path.join(__dir__, '*'))
+        except:
+            blocklists = []
+
+        if len(blocklists) > 0:
+            self.rules = self.load_rules(blocklists)
+        else:
+            self.rules = None
+
+    def should_update_blocklists(self, __dir__, max_age_in_days=7):
+        try:
+            fpath         = os.path.join(__dir__, '1.txt')
+            file_mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(fpath))
+            today         = datetime.datetime.today()
+            age           = today - file_mod_time
+
+            return (age.days > max_age_in_days)
+        except:
+            return True
+
+    def update_blocklists(self, __dir__):
+        default_blocklist_urls = []
+        default_blocklist_urls.append('https://easylist-downloads.adblockplus.org/easylist.txt')
+        # default_blocklist_urls.append('https://easylist-downloads.adblockplus.org/easyprivacy.txt')
+        # default_blocklist_urls.append('https://easylist-downloads.adblockplus.org/fanboy-annoyance.txt')
+        # default_blocklist_urls.append('https://easylist-downloads.adblockplus.org/fanboy-social.txt')
+
+        for index, url in enumerate(default_blocklist_urls):
+            fpath = os.path.join(__dir__, str(index + 1) + '.txt')
+
+            try:
+                os.remove(fpath)
+            except:
+                pass
+
+            try:
+                urllib.request.urlretrieve(url, fpath)
+            except:
+                pass
+
+    def load_rules(self, blocklists=None):
+        rules = AdblockRules(
+            self.combined(blocklists),
+            # supported_options=['script', 'domain', 'image', 'stylesheet', 'object']
+        )
+        return rules
+
+    # Open and combine many files into a single generator,
+    # which returns all of their lines.
+    # (Like running "cat" on a bunch of files.)
+    def combined(self, filenames):
+      for filename in filenames:
+        with open(filename) as file:
+          for line in file:
+            yield line
+
+    def request(self, flow):
+        req     = flow.request
+        options = {'domain': req.host}
+
+        if self.IMAGE_MATCHER.search(req.path):
+            options["image"] = True
+        elif self.SCRIPT_MATCHER.search(req.path):
+            options["script"] = True
+        elif self.STYLESHEET_MATCHER.search(req.path):
+            options["stylesheet"] = True
+
+        if self.rules and self.rules.should_block(req.url, options):
+            flow.response = http.Response.make(
+                200,
+                b"BLOCKED.",
+                {"Content-Type": "text/html"}
+            )
+
+
+addons = [AdBlock()]
