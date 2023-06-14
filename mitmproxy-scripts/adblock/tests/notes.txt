@@ -30,16 +30,6 @@ test results:
        * blocklists will automatically update when older than 7 days,
          when 'adblock' script is initialized,
          which occurs when 'PCAPdroid-mitm' is started
-     - issues:
-       * When an automatic blocklists update is triggered,
-         the files download very quickly,
-         but there must be a race-condition of some sort,
-         because the 'adblock' hangs,
-         and prevents 'PCAPdroid-mitm' from working properly.
-         When this occurs,
-         after the blocklists have finished download,
-         if 'PCAPdroid-mitm' is stopped and restarted,
-         everything works as it should.
 
 ==============
 extensibility:

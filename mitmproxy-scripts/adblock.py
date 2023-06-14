@@ -485,9 +485,10 @@ def split_data(iterable, pred):
 #            https://github.com/epitron/mitm-adblock/blob/1de914dabc11b50183acdf9bbf7e4aaced6ff91b/LICENSE.txt
 # ------------------------------------------------
 
-import datetime, os, re
+import asyncio, datetime, os, re
 import urllib.request
 from mitmproxy import http
+from mitmproxy.script import concurrent
 from glob import glob
 
 
@@ -501,18 +502,11 @@ class AdBlock:
         __dir__ = __file__.removesuffix('.py')
         __dir__ = os.path.join(__dir__, 'output', 'blocklists')
 
+        self.rules = None
         if self.should_update_blocklists(__dir__):
-            self.update_blocklists(__dir__)
-
-        try:
-            blocklists = glob(os.path.join(__dir__, '*'))
-        except:
-            blocklists = []
-
-        if len(blocklists) > 0:
-            self.rules = self.load_rules(blocklists)
+            asyncio.create_task(self.update_blocklists(__dir__))
         else:
-            self.rules = None
+            asyncio.create_task(self.load_blocklists(__dir__))
 
     def should_update_blocklists(self, __dir__, max_age_in_days=7):
         try:
@@ -525,7 +519,7 @@ class AdBlock:
         except:
             return True
 
-    def update_blocklists(self, __dir__):
+    async def update_blocklists(self, __dir__):
         default_blocklist_urls = []
         default_blocklist_urls.append('https://easylist-downloads.adblockplus.org/easylist.txt')
         # default_blocklist_urls.append('https://easylist-downloads.adblockplus.org/easyprivacy.txt')
@@ -545,6 +539,19 @@ class AdBlock:
             except:
                 pass
 
+        await self.load_blocklists(__dir__)
+
+    async def load_blocklists(self, __dir__):
+        try:
+            blocklists = glob(os.path.join(__dir__, '*'))
+        except:
+            blocklists = []
+
+        if len(blocklists) > 0:
+            self.rules = self.load_rules(blocklists)
+        else:
+            self.rules = None
+
     def load_rules(self, blocklists=None):
         rules = AdblockRules(
             self.combined(blocklists),
@@ -561,23 +568,25 @@ class AdBlock:
           for line in file:
             yield line
 
+    @concurrent
     def request(self, flow):
-        req     = flow.request
-        options = {'domain': req.host}
+        if self.rules:
+            req     = flow.request
+            options = {'domain': req.host}
 
-        if self.IMAGE_MATCHER.search(req.path):
-            options["image"] = True
-        elif self.SCRIPT_MATCHER.search(req.path):
-            options["script"] = True
-        elif self.STYLESHEET_MATCHER.search(req.path):
-            options["stylesheet"] = True
+            if self.IMAGE_MATCHER.search(req.path):
+                options["image"] = True
+            elif self.SCRIPT_MATCHER.search(req.path):
+                options["script"] = True
+            elif self.STYLESHEET_MATCHER.search(req.path):
+                options["stylesheet"] = True
 
-        if self.rules and self.rules.should_block(req.url, options):
-            flow.response = http.Response.make(
-                200,
-                b"BLOCKED.",
-                {"Content-Type": "text/html"}
-            )
+            if self.rules.should_block(req.url, options):
+                flow.response = http.Response.make(
+                    200,
+                    b"BLOCKED.",
+                    {"Content-Type": "text/html"}
+                )
 
 
 addons = [AdBlock()]
