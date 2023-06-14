@@ -1,0 +1,6 @@
+{
+    "regex_url"            : "^.*$",
+    "regex_insert_before"  : "</\\s*head",
+    "regex_insert_after"   : "",
+    "regex_insert_between" : ""
+}

@@ -1,0 +1,12 @@
+<style>
+html, body {
+  background-color: #bb86fc !important;
+  color: #333333 !important;
+}
+</style>
+
+<script>
+window.addEventListener("DOMContentLoaded", function(event) {
+  window.alert("DOM fully loaded and parsed")
+})
+</script>

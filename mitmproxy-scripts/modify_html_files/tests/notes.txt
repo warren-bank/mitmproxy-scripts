@@ -1,0 +1,39 @@
+======
+usage:
+======
+* in directory: 'modify_html_files/input'
+  - each "rule" consists of a pair of two files:
+    1. "${unique-name}.json"
+    2. "${unique-name}.txt"
+  - where:
+    * the JSON file defines an object:
+      - required attributes:
+        * regex_url
+      - exactly one of the following attributes is required:
+        * regex_insert_before
+        * regex_insert_after
+        * regex_insert_between
+      - where:
+        * regex_url
+          - must match the requested URL
+        * regex_insert_before
+          - must be found in the HTML content
+          - capture groups are ignored
+        * regex_insert_after
+          - must be found in the HTML content
+          - capture groups are ignored
+        * regex_insert_between
+          - must be found in the HTML content
+          - the regex pattern must include two capture groups;
+            unless doing something very advanced,
+            the entire pattern will typically be divided between these two groups
+    * the TEXT file contains HTML content:
+      - which is injected into the HTML response,
+        conditional on: 'regex_url' match
+        at a position determined by: 'regex_insert_xxx' match
+
+========
+00-demo:
+========
+* illustrates how to inject CSS and JS into every HTML page,
+  by appending content to the end of the <head> element.
