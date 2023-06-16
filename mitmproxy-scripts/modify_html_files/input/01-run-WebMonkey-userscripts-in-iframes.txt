@@ -1,0 +1,13 @@
+<script>
+(function(){
+  var secret = "1234"
+
+  if ((window.top !== window.window) && window.WebViewWM && window.WebViewWM.getUserscriptJS) {
+    var jsCode = window.WebViewWM.getUserscriptJS(secret, window.location.href)
+
+    if (jsCode) {
+      document.write('<sc' + 'ript>' + jsCode + '</sc' + 'ript>')
+    }
+  }
+})()
+</script>
