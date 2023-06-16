@@ -1,0 +1,72 @@
+======
+usage:
+======
+* in directory: 'modify_http_headers/input'
+  - "rule sets" that modify request headers
+     are stored in JSON files that have the filename suffix: '.req_rules.json'
+  - "rule sets" that modify response headers
+     are stored in JSON files that have the filename suffix: '.res_rules.json'
+  - where:
+    * the JSON schema is the same for both,
+      as described here:
+        https://github.com/warren-bank/moz-rewrite/tree/json/master#data-structure
+    * each JSON file defines an object:
+      - required attributes:
+        * url
+        * headers
+      - optional attributes:
+        * stop
+      - where:
+        * url
+          - regex pattern stored as a string
+          - must match the requested URL
+          - capture groups are ignored
+        * headers
+          - object
+            * keys:
+              - strings that correspond to the name of an HTTP header
+              - are not case sensitive
+            * values:
+              - if falsy: indicates that the header should be removed
+              - if string: add or update the header
+        * stop
+          - boolean
+            * true: do not process any additional rules
+
+========
+00-demo:
+========
+* this "rule set" is identical for requests and responses
+  - the same headers are added in both directions
+
+* URLs for testing:
+  1. https://httpbin.org/headers
+     - added headers:
+         x-custom-sample-header-01: Hello
+         x-custom-sample-header-02: Bar
+  2. https://www.httpbin.org/headers
+     - added headers:
+         x-custom-sample-header-01: WWW-Foo
+         x-custom-sample-header-02: WWW-Bar
+         x-custom-sample-header-03: WWW-Baz
+
+==============
+extensibility:
+==============
+
+1. directory: 'modify_http_headers/input'
+   * purpose:
+     - a user can save custom "rule sets",
+       as described (above)
+
+2. file: 'modify_http_headers.py'
+   * variables: 'rule_sets', 'current_rule_set_index'
+   * purpose:
+     - 'rule_sets' defines an array of filename glob patterns
+       * a user can configure any number of glob patterns
+       * only one glob pattern is active at runtime
+     - 'current_rule_set_index' is the index of a glob pattern in the 'rule_sets' array
+       * a user can select the index of one glob pattern
+       * this glob pattern defines the active "rule set"
+       * this configuration makes it easy for a user to switch between alternate "rule sets",
+         which may be tailored by the user for distinct use cases
